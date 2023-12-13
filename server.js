@@ -1,7 +1,8 @@
 const express = require("express");
 const path = require("path");
 //const api = require("./routes/index.js");
-
+let database = require("./db/db.json")
+const fs = require("fs")
 const PORT = process.env.port || 3001;
 
 const app = express();
@@ -25,6 +26,28 @@ app.get("/", (req, res) =>
 app.get("/notes", (req, res) =>
   res.sendFile(path.join(__dirname, "/public/notes.html"))
 );
+
+// api/controller routes
+app.get("/api/notes", (req, res)=>{
+    res.json(database)
+})
+
+app.post("/api/notes", (req, res)=>{
+    let newNote ={
+        title: req.body.title,
+        text: req.body.text,
+        id: Math.random()
+    }
+    //updates database with newNote values
+    database.push(newNote)
+    
+    //re writes database to include newNote
+    fs.writeFileSync("./db/db.json", JSON.stringify(database))
+
+    //send new response version of db to front end
+    res.json(database)
+
+})
 
 // base url = http://localhost:3001
 app.listen(PORT, () =>
