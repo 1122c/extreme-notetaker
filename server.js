@@ -1,55 +1,54 @@
 const express = require("express");
 const path = require("path");
-//const api = require("./routes/index.js");
-let database = require("./db/db.json")
-const fs = require("fs")
-const PORT = process.env.port || 3001;
+const fs = require("fs");
+const { v4: uuidv4 } = require("uuid"); // for unique ID generation
+const PORT = process.env.PORT || 3001;
 
 const app = express();
 
-
-
-// Middleware for parsing JSON and urlencoded form data
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-//app.use("/api", api);
-
 app.use(express.static("public"));
 
-// GET Route for homepage
-// view routes direct what is seen on screen
 app.get("/", (req, res) =>
   res.sendFile(path.join(__dirname, "/public/index.html"))
 );
-
-// GET Route for feedback page
 app.get("/notes", (req, res) =>
   res.sendFile(path.join(__dirname, "/public/notes.html"))
 );
 
-// api/controller routes
-app.get("/api/notes", (req, res)=>{
-    res.json(database)
-})
-
-app.post("/api/notes", (req, res)=>{
-    let newNote ={
-        title: req.body.title,
-        text: req.body.text,
-        id: Math.random()
+app.get("/api/notes", (req, res) => {
+  fs.readFile("./db/db.json", "utf8", (err, data) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: "Error reading notes" });
     }
-    //updates database with newNote values
-    database.push(newNote)
-    
-    //re writes database to include newNote
-    fs.writeFileSync("./db/db.json", JSON.stringify(database))
+    res.json(JSON.parse(data));
+  });
+});
 
-    //send new response version of db to front end
-    res.json(database)
+app.post("/api/notes", (req, res) => {
+  const newNote = { ...req.body, id: uuidv4() };
 
-})
+  fs.readFile("./db/db.json", "utf8", (err, data) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: "Error reading notes" });
+    }
 
-// base url = http://localhost:3001
+    const notes = JSON.parse(data);
+    notes.push(newNote);
+
+    fs.writeFile("./db/db.json", JSON.stringify(notes, null, 2), (err) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ message: "Error saving note" });
+      }
+      res.json(newNote);
+    });
+  });
+});
+
 app.listen(PORT, () =>
   console.log(`App listening at http://localhost:${PORT}`)
 );
